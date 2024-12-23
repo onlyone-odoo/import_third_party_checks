@@ -1,0 +1,17 @@
+<!-- third_party_check_import/views/menu.xml -->
+<odoo>
+    <menuitem
+        id="menu_third_party_check_import_root"
+        name="Import Third Party Checks"
+        parent="account_ux.menu_finance_bank_and_cash"
+        sequence="90"
+    />
+    
+    <menuitem
+        id="menu_third_party_check_import_action"
+        name="Import Checks"
+        parent="menu_third_party_check_import_root"
+        action="action_import_third_party_checks_wizard"
+        sequence="10"
+    />
+</odoo>

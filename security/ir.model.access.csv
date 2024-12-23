@@ -1,0 +1,4 @@
+# third_party_check_import/security/ir.model.access.csv
+
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_import_third_party_checks_wizard,access_import_third_party_checks_wizard,model_import_third_party_checks_wizard,base.group_user,1,1,1,1
