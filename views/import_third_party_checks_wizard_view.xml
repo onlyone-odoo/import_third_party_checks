@@ -1,4 +1,4 @@
-<!-- third_party_check_import/views/import_third_party_checks_wizard_view.xml -->
+<!-- import_third_party_checks/views/import_third_party_checks_wizard_view.xml -->
 <odoo>
     <record id="view_import_third_party_checks_wizard" model="ir.ui.view">
         <field name="name">import.third.party.checks.wizard.form</field>
