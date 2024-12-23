@@ -15,8 +15,8 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
 
     journal_id = fields.Many2one("account.journal", required=True, string="Journal")
     # Campo "payment_method_line_id" apuntando a account.payment.method.line
-    payment_method_id = fields.Many2one(
-        comodel_name="account.payment.method",
+    payment_method_line_id = fields.Many2one(
+        comodel_name="account.payment.method.line",
         string="Payment Method",
         domain="[]",
         required=True,
@@ -25,16 +25,16 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
     @api.onchange("journal_id")
     def _onchange_journal_id(self):
         if self.journal_id:
-            valid_methods = self.journal_id.inbound_payment_method_ids.ids
+            valid_methods = self.journal_id.inbound_payment_method_line_ids.ids
             if (
-                self.payment_method_id
-                and self.payment_method_id.id not in valid_methods
+                self.payment_method_line_id
+                and self.payment_method_line_id.id not in valid_methods
             ):
-                self.payment_method_id = False
-            return {"domain": {"payment_method_id": [("id", "in", valid_methods)]}}
+                self.payment_method_line_id = False
+            return {"domain": {"payment_method_line_id": [("id", "in", valid_methods)]}}
         else:
-            self.payment_method_id = False
-            return {"domain": {"payment_method_id": [("id", "in", [])]}}
+            self.payment_method_line_id = False
+            return {"domain": {"payment_method_line_id": [("id", "in", [])]}}
 
     default_date = fields.Date(string="Default Payment Date")
     file_data = fields.Binary(string="File (Excel)")
@@ -133,7 +133,7 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
                 "currency_id": currency_id,
                 "date": date,
                 "journal_id": self.journal_id.id,
-                "payment_method_id": self.payment_method_id.id
+                "payment_method_line_id": self.payment_method_line_id.id
                 if self.payment_method_line_id
                 else False,
                 "payment_type": "inbound",
