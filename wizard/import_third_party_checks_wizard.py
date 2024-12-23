@@ -18,11 +18,10 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
     payment_method_line_id = fields.Many2one(
         "account.payment.method.line",
         string="Payment Method",
-        domain="[('id', 'in', available_payment_method_line_ids)]",
+        domain="[]",  # Se sobreescribe en el onchange
         required=True,
-        readonly=True,
-        states={"draft": [("readonly", False)]},  # si tu wizard tuviese estado
     )
+
     # Se define este M2M para calcular los métodos de pago disponibles
     available_payment_method_line_ids = fields.Many2many(
         "account.payment.method.line",
@@ -30,17 +29,28 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
         store=False,
     )
 
-    @api.depends("journal_id")
-    def _compute_available_payment_method_line_ids(self):
-        for wizard in self:
-            if wizard.journal_id:
-                wizard.available_payment_method_line_ids = (
-                    wizard.journal_id.payment_method_line_ids
-                )
-            else:
-                wizard.available_payment_method_line_ids = self.env[
-                    "account.payment.method.line"
-                ].browse([])
+    @api.onchange("journal_id")
+    def _onchange_journal_id(self):
+        if self.journal_id:
+            # Si el payment_method_line_id actual no está en los métodos válidos de este diario,
+            # lo limpiamos para evitar inconsistencias
+            if (
+                self.payment_method_line_id
+                not in self.journal_id.payment_method_line_ids
+            ):
+                self.payment_method_line_id = False
+
+            # Devolvemos el dominio dinámico para el campo
+            return {
+                "domain": {
+                    "payment_method_line_id": [
+                        ("id", "in", self.journal_id.payment_method_line_ids.ids)
+                    ]
+                }
+            }
+        else:
+            self.payment_method_line_id = False
+            return {"domain": {"payment_method_line_id": [("id", "in", [])]}}
 
     default_date = fields.Date(string="Default Payment Date")
     file_data = fields.Binary(string="File (Excel)")
