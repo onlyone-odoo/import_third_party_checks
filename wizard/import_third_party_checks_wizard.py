@@ -1,4 +1,4 @@
-# third_party_check_import/wizard/import_third_party_checks_wizard.py
+# import_third_party_checks/wizard/import_third_party_checks_wizard.py
 import base64
 import logging
 from odoo import api, fields, models

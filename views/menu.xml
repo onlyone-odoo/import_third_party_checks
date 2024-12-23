@@ -1,4 +1,4 @@
-<!-- third_party_check_import/views/menu.xml -->
+<!-- import_third_party_checks/views/menu.xml -->
 <odoo>
     <menuitem
         id="menu_third_party_check_import_root"
