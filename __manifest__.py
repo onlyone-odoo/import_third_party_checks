@@ -25,8 +25,8 @@
     ],
     "data": [
         "security/ir.model.access.csv",
-        "views/menu.xml",
         "views/import_third_party_checks_wizard_view.xml",
+        "views/menu.xml",
     ],
     "installable": True,
     "application": False,
