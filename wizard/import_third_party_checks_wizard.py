@@ -21,7 +21,7 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
         domain="[('id', 'in', available_payment_method_line_ids)]",
         required=True,
         readonly=True,
-        states={"draft": [("readonly", False)]}  # si tu wizard tuviese estado
+        states={"draft": [("readonly", False)]},  # si tu wizard tuviese estado
     )
     # Se define este M2M para calcular los métodos de pago disponibles
     available_payment_method_line_ids = fields.Many2many(
@@ -34,9 +34,13 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
     def _compute_available_payment_method_line_ids(self):
         for wizard in self:
             if wizard.journal_id:
-                wizard.available_payment_method_line_ids = wizard.journal_id.payment_method_line_ids
+                wizard.available_payment_method_line_ids = (
+                    wizard.journal_id.payment_method_line_ids
+                )
             else:
-                wizard.available_payment_method_line_ids = self.env["account.payment.method.line"].browse([])
+                wizard.available_payment_method_line_ids = self.env[
+                    "account.payment.method.line"
+                ].browse([])
 
     default_date = fields.Date(string="Default Payment Date")
     file_data = fields.Binary(string="File (Excel)")
@@ -45,7 +49,7 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
     def action_import(self):
         if not self.file_data:
             return
-        date=today()
+        date = today()
         wb = openpyxl.load_workbook(
             filename=False,
             data_only=True,
@@ -84,10 +88,10 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
                 )
                 if partner:
                     partner_id = partner.id
-                else
+                else:
                     partner_id = 1
 
-            currency_id = self.env.company.currency_id.id,
+            currency_id = (self.env.company.currency_id.id,)
             if currency_code:
                 currency = self.env["res.currency"].search(
                     [("name", "=", currency_code)], limit=1
@@ -97,7 +101,9 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
 
             bank_id = False
             if bank_name:
-                bank = self.env["res.bank"].search([("name", "like", bank_name)], limit=1)
+                bank = self.env["res.bank"].search(
+                    [("name", "like", bank_name)], limit=1
+                )
                 if bank:
                     bank_id = bank.id
 
@@ -109,10 +115,13 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
                 # Si en el excel hay una fecha de pago, usarla
                 payment_date = check_payment_date
 
-            receiptbook = self.env["account.payment.receiptbook"].search([
+            receiptbook = self.env["account.payment.receiptbook"].search(
+                [
                     ("company_id", "=", self.env.company.id),
                     ("partner_type", "=", "customer"),
-                ], limit=1)
+                ],
+                limit=1,
+            )
 
             payment_group_vals = {
                 "partner_id": partner_id,
@@ -120,7 +129,6 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
                 "payment_date": date,
                 "receiptbook_id": receiptbook.id if receiptbook else False,
                 "ref": ref if ref else False,
-
             }
             payment_group = self.env["account.payment.group"].create(payment_group_vals)
 
