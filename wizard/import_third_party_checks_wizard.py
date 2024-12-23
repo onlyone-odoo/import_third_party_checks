@@ -15,42 +15,26 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
 
     journal_id = fields.Many2one("account.journal", required=True, string="Journal")
     # Campo "payment_method_line_id" apuntando a account.payment.method.line
-    payment_method_line_id = fields.Many2one(
-        "account.payment.method.line",
+    payment_method_id = fields.Many2one(
+        comodel_name="account.payment.method",
         string="Payment Method",
-        domain="[]",  # Se sobreescribe en el onchange
+        domain="[]",
         required=True,
-    )
-
-    # Se define este M2M para calcular los métodos de pago disponibles
-    available_payment_method_line_ids = fields.Many2many(
-        "account.payment.method.line",
-        compute="_compute_available_payment_method_line_ids",
-        store=False,
     )
 
     @api.onchange("journal_id")
     def _onchange_journal_id(self):
         if self.journal_id:
-            # Si el payment_method_line_id actual no está en los métodos válidos de este diario,
-            # lo limpiamos para evitar inconsistencias
+            valid_methods = self.journal_id.inbound_payment_method_ids.ids
             if (
-                self.payment_method_line_id
-                not in self.journal_id.payment_method_line_ids
+                self.payment_method_id
+                and self.payment_method_id.id not in valid_methods
             ):
-                self.payment_method_line_id = False
-
-            # Devolvemos el dominio dinámico para el campo
-            return {
-                "domain": {
-                    "payment_method_line_id": [
-                        ("id", "in", self.journal_id.payment_method_line_ids.ids)
-                    ]
-                }
-            }
+                self.payment_method_id = False
+            return {"domain": {"payment_method_id": [("id", "in", valid_methods)]}}
         else:
-            self.payment_method_line_id = False
-            return {"domain": {"payment_method_line_id": [("id", "in", [])]}}
+            self.payment_method_id = False
+            return {"domain": {"payment_method_id": [("id", "in", [])]}}
 
     default_date = fields.Date(string="Default Payment Date")
     file_data = fields.Binary(string="File (Excel)")
@@ -149,7 +133,7 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
                 "currency_id": currency_id,
                 "date": date,
                 "journal_id": self.journal_id.id,
-                "payment_method_line_id": self.payment_method_line_id.id
+                "payment_method_id": self.payment_method_id.id
                 if self.payment_method_line_id
                 else False,
                 "payment_type": "inbound",
