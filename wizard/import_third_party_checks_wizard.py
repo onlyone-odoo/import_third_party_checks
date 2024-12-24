@@ -28,25 +28,53 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
     @api.onchange("journal_id")
     def _onchange_journal_id(self):
         if self.journal_id:
-            valid_methods = self.journal_id.inbound_payment_method_line_ids.ids
+            # Obtener las líneas de métodos de pago entrantes asociadas al diario
+            valid_method_line_ids = self.journal_id.inbound_payment_method_line_ids.ids
+
             _logger.info(
-                f"Valid payment methods for journal {self.journal_id.name}: {valid_methods}"
+                f"Valid payment method lines for journal {self.journal_id.name}: {valid_method_line_ids}"
             )
+
+            # Limpiar el campo si el método seleccionado no es válido
             if (
                 self.payment_method_line_id
-                and self.payment_method_line_id.id not in valid_methods
+                and self.payment_method_line_id.id not in valid_method_line_ids
             ):
                 self.payment_method_line_id = False
+
+            # Configurar el dominio dinámico
             return {
                 "domain": {
-                    "payment_method_line_id": [
-                        ("journal_id", "=", self.journal_id.id),
-                    ]
+                    "payment_method_line_id": [("id", "in", valid_method_line_ids)]
                 }
             }
         else:
+            # Si no hay diario seleccionado, limpiar el dominio
             self.payment_method_line_id = False
             return {"domain": {"payment_method_line_id": [("id", "in", [])]}}
+
+    # @api.onchange("journal_id")
+    # def _onchange_journal_id(self):
+    #     if self.journal_id:
+    #         valid_methods = self.journal_id.inbound_payment_method_line_ids.ids
+    #         _logger.info(
+    #             f"Valid payment methods for journal {self.journal_id.name}: {valid_methods}"
+    #         )
+    #         if (
+    #             self.payment_method_line_id
+    #             and self.payment_method_line_id.id not in valid_methods
+    #         ):
+    #             self.payment_method_line_id = False
+    #         return {
+    #             "domain": {
+    #                 "payment_method_line_id": [
+    #                     ("journal_id", "=", self.journal_id.id),
+    #                 ]
+    #             }
+    #         }
+    #     else:
+    #         self.payment_method_line_id = False
+    #         return {"domain": {"payment_method_line_id": [("id", "in", [])]}}
 
     default_date = fields.Date(string="Default Payment Date")
     file_data = fields.Binary(string="File (Excel)")
