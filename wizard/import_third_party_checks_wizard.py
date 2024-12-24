@@ -2,6 +2,8 @@
 import base64
 import logging
 from odoo import api, fields, models
+from datetime import date
+
 
 try:
     import openpyxl
@@ -43,7 +45,7 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
     def action_import(self):
         if not self.file_data:
             return
-        date = today()
+        today_date = date.today()
         wb = openpyxl.load_workbook(
             filename=False,
             data_only=True,
