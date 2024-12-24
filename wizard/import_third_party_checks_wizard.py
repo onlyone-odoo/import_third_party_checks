@@ -79,7 +79,7 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
             partner_id = False
             if partner_name:
                 partner = self.env["res.partner"].search(
-                    [("name", "like", partner_name)], limit=1
+                    [("name", "=", partner_name)], limit=1
                 )
                 partner_id = partner.id if partner else 1
 
@@ -95,10 +95,9 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
             bank_id = False
             if bank_name:
                 bank = self.env["res.bank"].search(
-                    [("name", "like", bank_name)], limit=1
+                    [("name", "ilike", f"%{bank_name}%")], limit=1
                 )
-                if bank:
-                    bank_id = bank.id
+                bank_id = bank.id if bank else False
 
             if not amount:
                 continue
