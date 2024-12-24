@@ -126,9 +126,9 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
                 _logger.warning(f"Skipping row {row_index} due to missing amount")
                 continue
 
-            payment_date = self.default_date or today_date
+            payment_date = (self.default_date or today_date).isoformat()
             if check_payment_date:
-                payment_date = check_payment_date
+                payment_date = check_payment_date.isoformat()
 
             receiptbook = self.env["account.payment.receiptbook"].search(
                 [
@@ -147,6 +147,7 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
                 "payment_date": today_date,  # O usa payment_date si deseas
                 "receiptbook_id": receiptbook.id if receiptbook else False,
                 "communication": ref if ref else False,
+                "partner_type": "customer",
             }
             _logger.info(f"Creating payment group with values: {payment_group_vals}")
             payment_group = self.env["account.payment.group"].create(payment_group_vals)
