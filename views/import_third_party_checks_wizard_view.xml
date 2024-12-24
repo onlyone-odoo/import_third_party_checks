@@ -7,7 +7,7 @@
             <form string="Import Third Party Checks" create="false" edit="false">
                 <group>
                     <field name="journal_id"/>
-                    <field name="payment_method_line_id"/>
+                    <field name="payment_method_line_id" domain="[('id', 'in', journal_id.available_payment_method_ids)]"/>
                     <field name="default_date"/>
                     <field name="file_data" filename="file_name"/>
                     <field name="file_name" invisible="1"/>
