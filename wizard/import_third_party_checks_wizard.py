@@ -120,7 +120,7 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
                 "company_id": self.env.company.id,
                 "payment_date": today_date,  # O usa payment_date si deseas
                 "receiptbook_id": receiptbook.id if receiptbook else False,
-                "memo": ref if ref else False,
+                "communication": ref if ref else False,
             }
             payment_group = self.env["account.payment.group"].create(payment_group_vals)
 
