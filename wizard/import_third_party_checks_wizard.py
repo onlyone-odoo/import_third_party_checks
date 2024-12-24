@@ -1,9 +1,9 @@
 # import_third_party_checks/wizard/import_third_party_checks_wizard.py
+import io
 import base64
 import logging
-from odoo import api, fields, models
 from datetime import date
-
+from odoo import api, fields, models
 
 try:
     import openpyxl
@@ -16,7 +16,6 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
     _description = "Wizard to import third party checks from Excel"
 
     journal_id = fields.Many2one("account.journal", required=True, string="Journal")
-    # Campo "payment_method_line_id" apuntando a account.payment.method.line
     payment_method_line_id = fields.Many2one(
         comodel_name="account.payment.method.line",
         string="Payment Method",
@@ -33,7 +32,14 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
                 and self.payment_method_line_id.id not in valid_methods
             ):
                 self.payment_method_line_id = False
-            return {"domain": {"payment_method_line_id": [("id", "in", valid_methods)]}}
+            return {
+                "domain": {
+                    "payment_method_line_id": [
+                        ("id", "in", valid_methods),
+                        ("journal_id", "=", self.journal_id),
+                    ]
+                }
+            }
         else:
             self.payment_method_line_id = False
             return {"domain": {"payment_method_line_id": [("id", "in", [])]}}
@@ -45,29 +51,23 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
     def action_import(self):
         if not self.file_data:
             return
+
         today_date = date.today()
+        # Convertir a BytesIO antes de cargar con openpyxl
+        file_stream = io.BytesIO(base64.b64decode(self.file_data))
+
         wb = openpyxl.load_workbook(
-            filename=False,
+            file_stream,
             data_only=True,
             read_only=True,
-            file_contents=base64.b64decode(self.file_data),
         )
         sheet = wb.active
 
-        # Asumiendo que la primera fila es encabezado
-        # Columnas esperadas:
-        # A: Cliente (partner_id -> name o algo para buscar?),
-        # B: Importe (amount),
-        # C: Moneda (currency_id -> code?),
-        # D: Referencia (ref) (opcional),
-        # E: Numero de cheque (l10n_latam_check_number),
-        # F: Fecha de Pago (l10n_latam_check_payment_date),
-        # G: Banco (l10n_latam_check_bank_id -> name?)
         row_index = 0
         for row in sheet.iter_rows(values_only=True):
             row_index += 1
-            if row_index == 1:
-                continue  # skip header
+            if row_index == 1:  # Saltear el encabezado
+                continue
 
             partner_name = row[0]
             amount = row[1]
@@ -82,12 +82,10 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
                 partner = self.env["res.partner"].search(
                     [("name", "like", partner_name)], limit=1
                 )
-                if partner:
-                    partner_id = partner.id
-                else:
-                    partner_id = 1
+                partner_id = partner.id if partner else 1
 
-            currency_id = (self.env.company.currency_id.id,)
+            # Ajuste de currency_id: no usar tupla
+            currency_id = self.env.company.currency_id.id
             if currency_code:
                 currency = self.env["res.currency"].search(
                     [("name", "=", currency_code)], limit=1
@@ -104,11 +102,10 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
                     bank_id = bank.id
 
             if not amount:
-                continue  # Saltamos si faltan datos esenciales
+                continue
 
-            payment_date = self.default_date
+            payment_date = self.default_date or today_date
             if check_payment_date:
-                # Si en el excel hay una fecha de pago, usarla
                 payment_date = check_payment_date
 
             receiptbook = self.env["account.payment.receiptbook"].search(
@@ -122,7 +119,7 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
             payment_group_vals = {
                 "partner_id": partner_id,
                 "company_id": self.env.company.id,
-                "payment_date": date,
+                "payment_date": today_date,  # O usa payment_date si deseas
                 "receiptbook_id": receiptbook.id if receiptbook else False,
                 "ref": ref if ref else False,
             }
@@ -133,7 +130,7 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
                 "partner_id": partner_id,
                 "amount": amount,
                 "currency_id": currency_id,
-                "date": date,
+                "date": today_date,  # O usa payment_date si deseas
                 "journal_id": self.journal_id.id,
                 "payment_method_line_id": self.payment_method_line_id.id
                 if self.payment_method_line_id
@@ -147,4 +144,5 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
                 payment_vals["l10n_latam_check_bank_id"] = bank_id
 
             self.env["account.payment"].create(payment_vals)
+
         return
