@@ -30,19 +30,6 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
         if self.journal_id:
             # Obtener las líneas de métodos de pago entrantes asociadas al diario
             valid_method_line_ids = self.journal_id.inbound_payment_method_line_ids.ids
-
-            _logger.info(
-                f"Valid payment method lines for journal {self.journal_id.name}: {valid_method_line_ids}"
-            )
-
-            # Limpiar el campo si el método seleccionado no es válido
-            if (
-                self.payment_method_line_id
-                and self.payment_method_line_id.id not in valid_method_line_ids
-            ):
-                self.payment_method_line_id = False
-
-            # Configurar el dominio dinámico
             return {
                 "domain": {
                     "payment_method_line_id": [("id", "in", valid_method_line_ids)]
@@ -217,9 +204,12 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
         # Llama a la acción de reversión
         reversal_wizard = self.env["account.move.reversal"].create(
             {
-                "move_id": payment.move_id.id,
+                "journal_entry_ids": [
+                    (6, 0, [payment.move_id.id])
+                ],  # Relación con el asiento contable
                 "date": fields.Date.context_today(self),
                 "journal_id": payment.journal_id.id,
+                "reason": "Reversal of third-party check import",
             }
         )
 
