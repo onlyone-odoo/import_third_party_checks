@@ -171,6 +171,32 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
                 payment_vals["l10n_latam_check_bank_id"] = bank_id
 
             _logger.info(f"Creating payment with values: {payment_vals}")
-            self.env["account.payment"].create(payment_vals)
-
+            payment = self.env["account.payment"].create(payment_vals)
+            # validar el payment_group
+            payment_group.post()
+            # Revertir el asiento contable asociado
+            self._revert_payment_move(payment)
         return
+
+    def _revert_payment_move(self, payment):
+        """Reversión automática del asiento contable del pago."""
+        if not payment.move_id:
+            _logger.warning(f"No journal entry found for payment ID {payment.id}")
+            return
+
+        _logger.info(f"Reversing journal entry for payment ID {payment.id}")
+
+        # Llama a la acción de reversión
+        reversal_wizard = self.env["account.move.reversal"].create(
+            {
+                "move_id": payment.move_id.id,
+                "date": fields.Date.context_today(self),
+                "journal_id": payment.journal_id.id,
+            }
+        )
+
+        reversal_wizard.reverse_moves()
+        _logger.info(f"Reversed journal entry for payment ID {payment.id}")
+
+
+# si todo sale bien esto deberia dejar cheques sin asientos contables
