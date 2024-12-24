@@ -35,13 +35,15 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
     def _compute_available_payment_method_ids(self):
         for wizard in self:
             if wizard.journal_id:
-                wizard.available_payment_method_ids = (
-                    wizard.journal_id.available_payment_method_ids
-                )
-            else:
+                # Buscar todas las líneas de métodos de pago asociadas al journal_id
                 wizard.available_payment_method_ids = self.env[
                     "account.payment.method.line"
-                ].browse([])
+                ].search([("journal_id", "=", wizard.journal_id.id)])
+            else:
+                # Asignar un conjunto vacío si no hay journal_id seleccionado
+                wizard.available_payment_method_ids = self.env[
+                    "account.payment.method.line"
+                ]
 
     default_date = fields.Date(string="Default Payment Date")
     file_data = fields.Binary(string="File (Excel)")
