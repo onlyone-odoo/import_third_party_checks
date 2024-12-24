@@ -28,16 +28,25 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
     @api.onchange("journal_id")
     def _onchange_journal_id(self):
         if self.journal_id:
-            # Obtener las líneas de métodos de pago entrantes asociadas al diario
-            valid_method_line_ids = self.journal_id.inbound_payment_method_line_ids.ids
+            # Usar el campo `available_payment_method_ids` del diario
+            temp_available_payment_method_ids = (
+                self.journal_id.available_payment_method_ids.ids
+            )
+
+            _logger.info(
+                f"Available payment methods for journal {self.journal_id.name}: {temp_available_payment_method_ids}"
+            )
+
+            # Configurar el dominio dinámico para `payment_method_line_id`
             return {
                 "domain": {
-                    "payment_method_line_id": [("id", "in", valid_method_line_ids)]
+                    "payment_method_line_id": [
+                        ("id", "in", temp_available_payment_method_ids)
+                    ]
                 }
             }
         else:
             # Si no hay diario seleccionado, limpiar el dominio
-            self.payment_method_line_id = False
             return {"domain": {"payment_method_line_id": [("id", "in", [])]}}
 
     # @api.onchange("journal_id")
@@ -204,7 +213,7 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
         # Llama a la acción de reversión
         reversal_wizard = self.env["account.move.reversal"].create(
             {
-                "journal_entry_ids": [
+                "move_ids": [
                     (6, 0, [payment.move_id.id])
                 ],  # Relación con el asiento contable
                 "date": fields.Date.context_today(self),
