@@ -24,53 +24,24 @@ class ImportThirdPartyChecksWizard(models.TransientModel):
         domain="[]",
         required=True,
     )
+    available_payment_method_ids = fields.Many2many(
+        comodel_name="account.payment.method.line",
+        string="Available Payment Methods",
+        compute="_compute_available_payment_method_ids",
+        store=False,
+    )
 
-    @api.onchange("journal_id")
-    def _onchange_journal_id(self):
-        if self.journal_id:
-            # Usar el campo `available_payment_method_ids` del diario
-            temp_available_payment_method_ids = (
-                self.journal_id.available_payment_method_ids.ids
-            )
-
-            _logger.info(
-                f"Available payment methods for journal {self.journal_id.name}: {temp_available_payment_method_ids}"
-            )
-
-            # Configurar el dominio dinámico para `payment_method_line_id`
-            return {
-                "domain": {
-                    "payment_method_line_id": [
-                        ("id", "in", temp_available_payment_method_ids)
-                    ]
-                }
-            }
-        else:
-            # Si no hay diario seleccionado, limpiar el dominio
-            return {"domain": {"payment_method_line_id": [("id", "in", [])]}}
-
-    # @api.onchange("journal_id")
-    # def _onchange_journal_id(self):
-    #     if self.journal_id:
-    #         valid_methods = self.journal_id.inbound_payment_method_line_ids.ids
-    #         _logger.info(
-    #             f"Valid payment methods for journal {self.journal_id.name}: {valid_methods}"
-    #         )
-    #         if (
-    #             self.payment_method_line_id
-    #             and self.payment_method_line_id.id not in valid_methods
-    #         ):
-    #             self.payment_method_line_id = False
-    #         return {
-    #             "domain": {
-    #                 "payment_method_line_id": [
-    #                     ("journal_id", "=", self.journal_id.id),
-    #                 ]
-    #             }
-    #         }
-    #     else:
-    #         self.payment_method_line_id = False
-    #         return {"domain": {"payment_method_line_id": [("id", "in", [])]}}
+    @api.depends("journal_id")
+    def _compute_available_payment_method_ids(self):
+        for wizard in self:
+            if wizard.journal_id:
+                wizard.available_payment_method_ids = (
+                    wizard.journal_id.available_payment_method_ids
+                )
+            else:
+                wizard.available_payment_method_ids = self.env[
+                    "account.payment.method.line"
+                ].browse([])
 
     default_date = fields.Date(string="Default Payment Date")
     file_data = fields.Binary(string="File (Excel)")
